@@ -12,6 +12,31 @@ local lastPickedVehicle = nil
 local usingAdvanced = false
 local IsHotwiring = false
 
+VehicleClass = {
+    [0] = 'compacts',
+    [1] = 'sedans',
+    [2] = 'suvs',
+    [3] = 'coupes',
+    [4] = 'muscle',
+    [5] = 'sportclassics',
+    [6] = 'sports',
+    [7] = 'super',
+    [8] = 'motorcycles',
+    [9] = 'offroad',
+    [10] = 'industrial',
+    [11] = 'utility',
+    [12] = 'vans',
+    [13] = 'bicycles',
+    [14] = 'boats',
+    [15] = 'helicopters',
+    [16] = 'planes',
+    [17] = 'services',
+    [18] = 'emergency',
+    [19] = 'military',
+    [20] = 'commercial',
+    [21] = 'trains',
+}
+
 -----------------------
 ----   Threads     ----
 -----------------------
@@ -225,7 +250,53 @@ RegisterNetEvent('qb-vehiclekeys:client:GiveKeys', function(id)
 end)
 
 RegisterNetEvent('lockpicks:UseLockpick', function(isAdvanced)
-    LockpickDoor(isAdvanced)
+    local vehicle = QBCore.Functions.GetClosestVehicle()
+    local ped = PlayerPedId()
+    if IsPedInAnyVehicle(ped, false) and not IsHotwiring then
+        local vehicleIn = GetVehiclePedIsIn(ped)
+        if NeedHacking(vehicleIn) then
+            return QBCore.Functions.Notify("You need to use another item to hotwire this vehicle", "error")
+        end
+        local plate = QBCore.Functions.GetPlate(vehicleIn)
+        if GetPedInVehicleSeat(vehicleIn, -1) == PlayerPedId() and not HasKeys(plate) and
+            not isBlacklistedVehicle(vehicle) and not AreKeysJobShared(vehicleIn) then
+            Hotwire(vehicleIn, plate, false)
+            SetVehicleEngineOn(vehicleIn, false, false, true)
+        end
+    else
+        if vehicle == nil or vehicle == 0 then return end
+        if NeedHacking(vehicle) then
+            return QBCore.Functions.Notify("You need to use another item to unlock this vehicle", "error")
+        end
+        LockpickDoor(isAdvanced)
+    end
+end)
+
+RegisterNetEvent("qb-vehiclekeys:client:useHack", function()
+    local vehicle = QBCore.Functions.GetClosestVehicle()
+    if vehicle == nil or vehicle == 0 then return end
+    if IsPedInAnyVehicle(ped, false) and not IsHotwiring then
+        local vehicleIn = GetVehiclePedIsIn(ped)
+        if not NeedHacking(vehicleIn) then
+            return QBCore.Functions.Notify("You need to use lockpick fool", "error")
+        end
+        local plate = QBCore.Functions.GetPlate(vehicleIn)
+        if GetPedInVehicleSeat(vehicleIn, -1) == PlayerPedId() and not HasKeys(plate) and
+            not isBlacklistedVehicle(vehicle) and not AreKeysJobShared(vehicleIn) then
+            Hotwire(vehicleIn, plate, true)
+            SetVehicleEngineOn(vehicleIn, false, false, true)
+        end
+    else
+        if vehicle == nil or vehicle == 0 then return end
+        if not NeedHacking(vehicle) then
+            return QBCore.Functions.Notify("You need to use lockpick fool", "error")
+        end
+        HackDoor()
+    end
+    -- if not NeedHacking(vehicle) then
+    --     return QBCore.Functions.Notify("You need to use lockpick fool", "error")
+    -- end
+    -- HackDoor()
 end)
 
 
@@ -381,6 +452,16 @@ function GetPedsInVehicle(vehicle)
     return otherPeds
 end
 
+function HackDoor()
+    local ped = PlayerPedId()
+    local pos = GetEntityCoords(ped)
+    local vehicle = QBCore.Functions.GetClosestVehicle()
+    if vehicle == nil or vehicle == 0 then return end
+    if HasKeys(QBCore.Functions.GetPlate(vehicle)) then return end
+    if #(pos - GetEntityCoords(vehicle)) > 2.5 then return end
+    if GetVehicleDoorLockStatus(vehicle) <= 0 then return end
+    StartHackingMinigame()
+end
 function IsBlacklistedWeapon()
     local weapon = GetSelectedPedWeapon(PlayerPedId())
     if weapon ~= nil then
@@ -404,9 +485,53 @@ function LockpickDoor(isAdvanced)
     if GetVehicleDoorLockStatus(vehicle) <= 0 then return end
 
     usingAdvanced = isAdvanced
-    Config.LockPickDoorEvent()
+    StartLockpicking()
 end
 
+function StartLockpicking()
+    local animstart = true
+
+    CreateThread(function()
+        while animstart do
+            loadAnimDict("veh@break_in@0h@p_m_one@")
+            TaskPlayAnim(PlayerPedId(), "veh@break_in@0h@p_m_one@", "low_force_entry_ds", 3.0, 3.0, 10000, 16, 0, false,
+                false, false)
+            Wait(1000)
+        end
+    end)
+    exports['ps-ui']:Circle(function(success)
+        animstart = false
+        StopAnimTask(PlayerPedId(), "veh@break_in@0h@p_m_one@", "low_force_entry_ds", 1.0)
+        return LockpickFinishCallback(success)
+    end, 5, 20) -- NumberOfCircles, MS
+end
+function StartHackingMinigame()
+    local dict = "amb@medic@standing@kneel@idle_a"
+    local anim = "idle_c"
+    loadAnimDict(dict)
+    TaskPlayAnim(PlayerPedId(), dict, anim, 8.0, 8.0, -1, 1, 0)
+    exports['ps-ui']:Scrambler(function(success)
+        StopAnimTask(PlayerPedId(), dict, anim, 1.0)
+        return HackingFinishCallback(success)
+    end, "numeric", 30, 0) -- Type (alphabet, numeric, alphanumeric, greek, braille, runes), Time (Seconds), Mirrored (0: Normal, 1: Normal + Mirrored 2: Mirrored only )
+end
+
+function HackingFinishCallback(success)
+    local vehicle = QBCore.Functions.GetClosestVehicle()
+    if success then
+        TriggerServerEvent('hud:server:GainStress', math.random(1, 4))
+        lastPickedVehicle = vehicle
+        if GetPedInVehicleSeat(vehicle, -1) == PlayerPedId() then
+            TriggerServerEvent('qb-vehiclekeys:server:AcquireVehicleKeys', QBCore.Functions.GetPlate(vehicle))
+        else
+            QBCore.Functions.Notify(Lang:t("notify.vhacked"), 'success')
+            TriggerServerEvent('qb-vehiclekeys:server:setVehLockState', NetworkGetNetworkIdFromEntity(vehicle), 1)
+        end
+    else
+        TriggerServerEvent('hud:server:GainStress', math.random(1, 4))
+        AttemptPoliceAlert("steal")
+    end
+end
 function LockpickFinishCallback(success)
     local vehicle = QBCore.Functions.GetClosestVehicle()
 
@@ -549,7 +674,7 @@ function AttemptPoliceAlert(type)
             chance = Config.PoliceNightAlertChance
         end
         if math.random() <= chance then
-           TriggerServerEvent('police:server:policeAlert', Lang:t("info.palert") .. type)
+            exports['ps-dispatch']:CarJacking(vehicle)
         end
         AlertSend = true
         SetTimeout(Config.AlertCooldown, function()
@@ -576,4 +701,31 @@ function DrawText3D(x, y, z, text)
     local factor = (string.len(text)) / 370
     DrawRect(0.0, 0.0 + 0.0125, 0.017 + factor, 0.03, 0, 0, 0, 75)
     ClearDrawOrigin()
+end
+function NeedHacking(vehicle)
+    local needhacking = false
+    local vehClass = VehicleClass[GetVehicleClass(vehicle)]
+    local vehModel = GetEntityModel(vehicle)
+    local vehName2 = GetDisplayNameFromVehicleModel(vehModel)
+    local vehName = vehName2:lower()
+    for i = 1, #Config.HackingVehicle["name"] do
+        if vehName == Config.HackingVehicle["name"][i] then
+            needhacking = true
+            goto skip
+        end
+    end
+    for i = 1, #Config.HackingVehicle['vehicle_class'] do
+        if vehClass == Config.HackingVehicle['vehicle_class'][i] then
+            needhacking = true
+            goto skip
+        end
+    end
+    for i = 1, #Config.HackingVehicle["brand"] do
+        if QBCore.Shared.Vehicles[vehName]["brand"]:lower() == Config.HackingVehicle["brand"][i]:lower() then
+            needhacking = true
+            goto skip
+        end
+    end
+    ::skip::
+    return needhacking
 end

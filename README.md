@@ -1,5 +1,16 @@
+# This uses most updated qb-vehiclekeys 
+    Define your vehicles that need a hack device in config
+
+
+
+
 # qb-vehiclekeys
 Vehicle Keys System For QB-Core
+
+# Add this to qb-core/shared/items.lua + Add the image
+
+	['hacking_device']              = {['name'] = "hacking_device",                    ['label'] = "Hacking device",            ['weight'] = 500,        ['type'] = 'item',         ['image'] = 'hackingdevice.png',            ['unique'] = true,        ['useable']    = true,        ['shouldClose'] = true,       ['combinable'] = nil,   ['description'] = "A multi purpose hacking device"},
+
 
 # License
 

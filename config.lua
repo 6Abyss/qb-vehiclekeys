@@ -44,16 +44,50 @@ Config.SharedKeys = { -- Share keys amongst employees. Employees can lock/unlock
     ['police'] = { -- Job name
         requireOnduty = false,
         vehicles = {
-	    'police', -- Vehicle model
-	    'police2', -- Vehicle model
-	}
+            'npolchar',
+            'npolvette',
+            'npolchal',
+            'npolstang',
+            'npolvic',
+            'npolvic',
+            'polmav',
+            '21ramtrx',
+            'bcat',
+        }
     },
-
+    ['ambulance'] = { -- Job name
+        requireOnduty = false,
+        vehicles = {
+            '20ramambo',
+            '18firetahoe',
+            '20rampov',
+            'fd2',
+        }
+    },
     ['mechanic'] = {
         requireOnduty = false,
         vehicles = {
             'towtruck',
-	}
+        }
+    }
+}
+
+-- Vehicle That Required Hacking
+Config.HackingVehicle = {
+    ["vehicle_class"] = {
+        'emergency'
+    },
+    ["brand"] = {
+
+    },
+    ['name'] = {
+    'r32',
+    'dc2',
+    'rcf',
+    'a80',
+    'subwrx',
+    'lfa10',
+    'hondacivictr',
     }
 }
 

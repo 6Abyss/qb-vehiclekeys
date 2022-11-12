@@ -122,3 +122,9 @@ QBCore.Commands.Add("removekeys", Lang:t("addcom.rkeys"), {{name = Lang:t("addco
     end
     RemoveKeys(tonumber(args[1]), args[2])
 end, 'admin')
+
+QBCore.Functions.CreateUseableItem('hacking_device', function(source, item)
+    local Player = QBCore.Functions.GetPlayer(source)
+    if not Player.Functions.GetItemByName(item.name) then return end
+    TriggerClientEvent("qb-vehiclekeys:client:useHack", source)
+end)
