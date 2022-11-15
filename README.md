@@ -1,3 +1,6 @@
+Credits to https://github.com/JustLazzy
+ 
+
 # This uses most updated qb-vehiclekeys 
     Define your vehicles that need a hack device in config
 
